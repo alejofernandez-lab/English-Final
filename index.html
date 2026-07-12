@@ -140,6 +140,10 @@
   .error-item .right{ color:var(--green); font-weight:700; font-family:'Kalam',cursive; }
   .error-item .expl{ color:var(--pencil); font-size:13px; margin-top:4px; }
   .loading{ font-family:'Kalam',cursive; color:var(--pencil); font-size:15px; }
+  .checklist{ margin-bottom:14px; }
+  .checklist-item{ font-size:13.5px; padding:4px 0; }
+  .checklist-item.ok{ color:var(--green); }
+  .checklist-item.warn{ color:var(--margin-red); }
 
   /* Listening */
   .audio-controls{ display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
@@ -205,12 +209,15 @@
       <textarea id="opinion-text" placeholder="Escribí tu opinion writing acá..."></textarea>
       <div class="row">
         <span class="wordcount" id="opinion-count">0 palabras</span>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn-secondary" onclick="closeWorkspace('opinion')">← Elegir otro tema</button>
-          <button class="btn-primary" id="opinion-correct-btn" onclick="correctText('opinion')">Corregir con IA</button>
+          <button class="btn-primary" id="opinion-correct-btn" onclick="runLocalCorrection('opinion')">Corregir</button>
         </div>
       </div>
       <div class="feedback" id="opinion-feedback"></div>
+      <div style="margin-top:10px; text-align:right;">
+        <a href="#" onclick="correctText('opinion'); return false;" style="font-size:12.5px; color:var(--pencil); text-decoration:underline;">✨ Probar corrección más profunda con IA (solo funciona acá en la vista previa de Claude)</a>
+      </div>
     </div>
   </section>
 
@@ -257,12 +264,15 @@
       <textarea id="cl-text" placeholder="Escribí tu cover letter acá..." style="margin-top:10px;"></textarea>
       <div class="row">
         <span class="wordcount" id="cl-count">0 palabras</span>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn-secondary" onclick="closeWorkspace('cl')">← Elegir otro tema</button>
-          <button class="btn-primary" id="cl-correct-btn" onclick="correctText('cl')">Corregir con IA</button>
+          <button class="btn-primary" id="cl-correct-btn" onclick="runLocalCorrection('cl')">Corregir</button>
         </div>
       </div>
       <div class="feedback" id="cl-feedback"></div>
+      <div style="margin-top:10px; text-align:right;">
+        <a href="#" onclick="correctText('cl'); return false;" style="font-size:12.5px; color:var(--pencil); text-decoration:underline;">✨ Probar corrección más profunda con IA (solo funciona acá en la vista previa de Claude)</a>
+      </div>
     </div>
   </section>
 
@@ -293,11 +303,14 @@
 
         <div id="oral-phase-done" style="display:none;">
           <div class="transcript-box" id="oral-transcript"></div>
-          <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
+          <div style="display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap;">
             <button class="btn-secondary" onclick="closeOral()">← Otra tarjeta</button>
-            <button class="btn-primary" id="oral-correct-btn" onclick="correctOral()">Corregir con IA</button>
+            <button class="btn-primary" id="oral-correct-btn" onclick="runLocalCorrection('oral')">Corregir</button>
           </div>
           <div class="feedback" id="oral-feedback"></div>
+          <div style="margin-top:10px; text-align:center;">
+            <a href="#" onclick="correctOral(); return false;" style="font-size:12.5px; color:var(--pencil); text-decoration:underline;">✨ Probar corrección más profunda con IA (solo funciona acá en la vista previa de Claude)</a>
+          </div>
         </div>
       </div>
     </div>
@@ -542,7 +555,143 @@ function closeWorkspace(prefix){
   document.querySelectorAll(`#${prefix}-topics .topic-card`).forEach(c=>c.classList.remove('selected'));
 }
 
-/* ================= AI CORRECTION ================= */
+/* ================= LOCAL GRAMMAR ENGINE (no API needed, works everywhere) ================= */
+const irregular3rdPerson = {have:'has', do:'does', go:'goes'};
+function conjugate3rdPerson(verb){
+  const v = verb.toLowerCase();
+  if(irregular3rdPerson[v]) return irregular3rdPerson[v];
+  if(/[sxz]$|[cs]h$/.test(v)) return v+'es';
+  if(/[^aeiou]y$/.test(v)) return v.slice(0,-1)+'ies';
+  return v+'s';
+}
+const grammarRules = [
+  {regex:/\bI have (\d{1,2})( years?)?( old)?\b/gi, replace:(m,p1)=>`I am ${p1} years old`, explanation:"Para decir la edad en inglés se usa el verbo 'to be' ('I am ... years old'), no 'have'."},
+  {regex:/\bsince (\d+ years?)\b/gi, replace:(m,p1)=>`for ${p1}`, explanation:"'Since' se usa con un punto en el tiempo ('since 2020'). Para una duración se usa 'for' ('for 5 years')."},
+  {regex:/\bdepend of\b/gi, replace:"depend on", explanation:"El verbo 'depend' va seguido de la preposición 'on', no 'of'."},
+  {regex:/\bmarried with\b/gi, replace:"married to", explanation:"Se dice 'married to somebody', no 'married with'."},
+  {regex:/\binterested on\b/gi, replace:"interested in", explanation:"'Interested' va seguido de 'in', no 'on'."},
+  {regex:/\bdifferent that\b/gi, replace:"different from", explanation:"Se dice 'different from', no 'different that'."},
+  {regex:/\barrive to\b/gi, replace:"arrive at/in", explanation:"'Arrive' no lleva 'to': se dice 'arrive at' (un lugar puntual) o 'arrive in' (una ciudad/país)."},
+  {regex:/\blisten (music|the radio|songs|podcasts|a song)\b/gi, replace:(m,p1)=>`listen to ${p1}`, explanation:"'Listen' necesita la preposición 'to' antes del objeto."},
+  {regex:/\bexplain me\b/gi, replace:"explain to me", explanation:"'Explain' necesita 'to' antes de la persona: 'explain to me', no 'explain me'."},
+  {regex:/\bdiscuss about\b/gi, replace:"discuss", explanation:"'Discuss' ya incluye el significado de 'about', no se usa junto."},
+  {regex:/\bafraid of to\b/gi, replace:"afraid to", explanation:"Se dice 'afraid to do something', no 'afraid of to'."},
+  {regex:/\bI am agree\b/gi, replace:"I agree", explanation:"'Agree' es un verbo, no se usa con 'am': 'I agree', no 'I am agree'."},
+  {regex:/\bpeople is\b/gi, replace:"people are", explanation:"'People' se trata como plural: 'people are', no 'people is'."},
+  {regex:/\badvices\b/gi, replace:"advice", explanation:"'Advice' es incontable en inglés, no tiene plural."},
+  {regex:/\binformations\b/gi, replace:"information", explanation:"'Information' es incontable en inglés, no tiene plural."},
+  {regex:/\bfurnitures\b/gi, replace:"furniture", explanation:"'Furniture' es incontable en inglés, no tiene plural."},
+  {regex:/\bdo (a|the) mistake\b/gi, replace:(m,p1)=>`make ${p1} mistake`, explanation:"Se dice 'make a mistake', no 'do a mistake'."},
+  {regex:/\bmake (a|the) question\b/gi, replace:(m,p1)=>`ask ${p1} question`, explanation:"Se dice 'ask a question', no 'make a question'."},
+  {regex:/\bmake (a|the) party\b/gi, replace:(m,p1)=>`have ${p1} party`, explanation:"Se dice 'have a party', no 'make a party'."},
+  {regex:/\bless people\b/gi, replace:"fewer people", explanation:"Con sustantivos contables en plural se usa 'fewer', no 'less'."},
+  {regex:/\bmuch (friends|people|things|problems|books|students|jobs|opportunities)\b/gi, replace:(m,p1)=>`many ${p1}`, explanation:"Con sustantivos contables en plural se usa 'many', no 'much'."},
+  {regex:/\bmany (money|information|advice|furniture|homework|time)\b/gi, replace:(m,p1)=>`much ${p1}`, explanation:"Con sustantivos incontables se usa 'much', no 'many'."},
+  {regex:/\bmore big\b/gi, replace:"bigger", explanation:"'Big' es un adjetivo corto: comparativo irregular con '-er', no con 'more'."},
+  {regex:/\bmore good\b/gi, replace:"better", explanation:"El comparativo de 'good' es irregular: 'better', no 'more good'."},
+  {regex:/\bmore bad\b/gi, replace:"worse", explanation:"El comparativo de 'bad' es irregular: 'worse', no 'more bad'."},
+  {regex:/\b(must|should|would|can|could|will) to\b/gi, replace:(m,p1)=>p1, explanation:"Los verbos modales (must/should/would/can/could/will) nunca van seguidos de 'to'."},
+  {regex:/\byour welcome\b/gi, replace:"you're welcome", explanation:"'You're' (you are) es la contracción correcta acá, no el posesivo 'your'."},
+  {regex:/\b(more|better|bigger|smaller|worse|less|greater|higher|lower|older|younger|faster|easier|harder) then\b/gi, replace:(m,p1)=>`${p1} than`, explanation:"En comparaciones se usa 'than' (que), no 'then' (entonces)."},
+  {regex:/\bloose (weight|the game|my job|time|control|money)\b/gi, replace:(m,p1)=>`lose ${p1}`, explanation:"'Lose' (perder) se escribe con una sola 'o'. 'Loose' significa 'suelto/flojo'."},
+  {regex:/\ba hour\b/gi, replace:"an hour", explanation:"'Hour' empieza con sonido vocálico (la 'h' es muda), así que va con 'an'."},
+  {regex:/\ban university\b/gi, replace:"a university", explanation:"'University' empieza con sonido de consonante ('iu'), así que va con 'a', no 'an'."},
+  {regex:/\ban european\b/gi, replace:"a European", explanation:"'European' empieza con sonido de consonante ('iu'), así que va con 'a', no 'an'."},
+  {regex:/\ban unique\b/gi, replace:"a unique", explanation:"'Unique' empieza con sonido de consonante ('iu'), así que va con 'a', no 'an'."},
+  {regex:/\b(like|love|enjoy|hate) (play|watch|read|study|work|swim|cook|travel|dance|sing|write|listen)\b/gi, replace:(m,p1,p2)=>`${p1} ${p2}ing`, explanation:"Después de 'like/love/enjoy/hate' el verbo va en gerundio (-ing)."},
+  {regex:/\b(don't|doesn't) (have|know|want|need) no\b/gi, replace:(m,p1,p2)=>`${p1} ${p2} any`, explanation:"En inglés no se usa doble negación: 'don't have any', no 'don't have no'."},
+  {regex:/\b(want|need|decide|plan|try) (go|do|make|study|work|see|be|learn|find)\b/gi, replace:(m,p1,p2)=>`${p1} to ${p2}`, explanation:"Estos verbos necesitan 'to' antes del infinitivo."},
+  {regex:/\bI is\b/gi, replace:"I am", explanation:"La primera persona del verbo 'to be' es 'am', no 'is'."},
+  {regex:/\bI are\b/gi, replace:"I am", explanation:"La primera persona del verbo 'to be' es 'am', no 'are'."},
+  {regex:/\byou is\b/gi, replace:"you are", explanation:"Con 'you' el verbo 'to be' es 'are', no 'is'."},
+  {regex:/\b(he|she|it) are\b/gi, replace:(m,p1)=>`${p1} is`, explanation:"Con 'he/she/it' el verbo 'to be' es 'is', no 'are'."},
+  {regex:/\bwe is\b/gi, replace:"we are", explanation:"Con 'we' el verbo 'to be' es 'are', no 'is'."},
+  {regex:/\bthey is\b/gi, replace:"they are", explanation:"Con 'they' el verbo 'to be' es 'are', no 'is'."},
+  {regex:/\b(he|she|it)\s+(go|do|have|make|want|need|like|work|study|live|play|watch|read|write|come|get|say|know|think|feel|look|call|try|ask|use|find|give|tell|leave|put|keep|help|talk|start|show|hear|run|move|pay|bring|remember|believe|prefer)\b/gi,
+   replace:(m,p1,p2)=>`${p1} ${conjugate3rdPerson(p2)}`,
+   explanation:"En presente simple, con 'he/she/it' el verbo lleva 's' o 'es' al final."},
+];
+
+function analyzeText(text){
+  const issues = [];
+  grammarRules.forEach(rule=>{
+    rule.regex.lastIndex = 0;
+    let match;
+    while((match = rule.regex.exec(text)) !== null){
+      const original = match[0];
+      const suggested = typeof rule.replace === 'function' ? rule.replace(...match) : rule.replace;
+      if(suggested.toLowerCase() !== original.toLowerCase()){
+        issues.push({ index: match.index, length: original.length, wrong: original, right: suggested, explanation: rule.explanation });
+      }
+    }
+  });
+  issues.sort((a,b)=>a.index-b.index);
+  const filtered = [];
+  let lastEnd = -1;
+  issues.forEach(iss=>{
+    if(iss.index >= lastEnd){ filtered.push(iss); lastEnd = iss.index + iss.length; }
+  });
+  return filtered;
+}
+
+function applyCorrections(text, issues){
+  let result = text;
+  [...issues].sort((a,b)=>b.index-a.index).forEach(iss=>{
+    result = result.slice(0, iss.index) + iss.right + result.slice(iss.index + iss.length);
+  });
+  return result;
+}
+
+function buildChecklist(prefix, text){
+  const words = text.trim().length ? text.trim().split(/\s+/).length : 0;
+  const list = [];
+  if(prefix === 'opinion'){
+    list.push({ok: words>=150 && words<=200, label: `Extensión: ${words} palabras (objetivo 150-200)`});
+    list.push({ok: /\b(I (agree|disagree|think|believe)|in my opinion|from my point of view)\b/i.test(text), label:"Postura clara al principio (I think.../In my opinion...)"});
+    list.push({ok: /\b(in conclusion|to conclude|overall|to sum up)\b/i.test(text), label:"Conclusión marcada (In conclusion.../To sum up...)"});
+  } else if(prefix === 'cl'){
+    list.push({ok: words>=120 && words<=150, label: `Extensión: ${words} palabras (objetivo 120-150)`});
+    list.push({ok: /\bDear\s+[A-Za-z]/i.test(text), label:"Saludo inicial con 'Dear ...'"});
+    list.push({ok: /\bI am writing to\b/i.test(text), label:"Introducción con 'I am writing to...'"});
+    list.push({ok: /\b(yours faithfully|yours sincerely|best regards|kind regards)\b/i.test(text), label:"Cierre formal (Yours faithfully / Yours sincerely)"});
+  }
+  return list;
+}
+
+function runLocalCorrection(prefix){
+  const text = getSourceText(prefix);
+  const fbEl = document.getElementById(prefix+'-feedback');
+  if(!text.trim()){ alert('Escribí algo antes de corregir.'); return; }
+  const issues = analyzeText(text);
+  const checklist = buildChecklist(prefix, text);
+  const correctedText = applyCorrections(text, issues);
+  let score;
+  if(issues.length===0) score = "9/10";
+  else if(issues.length<=2) score = "7/10";
+  else if(issues.length<=4) score = "6/10";
+  else score = "4/10";
+  const overall = issues.length===0
+    ? "No encontré errores de gramática o vocabulario en las reglas que reviso. ¡Buen trabajo! Revisá igual el checklist de estructura."
+    : `Encontré ${issues.length} punto${issues.length>1?'s':''} para mejorar. Mirá el detalle abajo.`;
+  renderFeedback(prefix, {
+    score_estimate: score,
+    overall_feedback: overall,
+    errors: issues.map(i=>({wrong:i.wrong, right:i.right, explanation:i.explanation})),
+    corrected_text: issues.length ? correctedText : null
+  }, checklist);
+}
+
+function getSourceText(prefix){
+  if(prefix === 'opinion') return document.getElementById('opinion-text').value;
+  if(prefix === 'cl') return document.getElementById('cl-text').value;
+  if(prefix === 'oral'){
+    const manual = document.getElementById('oral-manual');
+    return (manual ? manual.value : oralTranscript);
+  }
+  return '';
+}
+
+/* ================= AI CORRECTION (only works in Claude preview) ================= */
 function extractJSON(raw){
   raw = raw.replace(/```json|```/g,'').trim();
   const start = raw.indexOf('{');
@@ -609,11 +758,16 @@ Respond ONLY with valid JSON (no markdown, no preamble) in this exact structure:
 Find between 3 and 8 of the most important errors (grammar, verb tenses, prepositions, word choice, register). If the text is very short or empty, say so in overall_feedback and return an empty errors array.`;
 }
 
-function renderFeedback(prefix, data){
+function renderFeedback(prefix, data, checklist){
   const el = document.getElementById(prefix+'-feedback');
+  const checklistHtml = (checklist && checklist.length) ? `
+    <div class="checklist">
+      ${checklist.map(c=>`<div class="checklist-item ${c.ok?'ok':'warn'}">${c.ok?'✅':'⚠️'} ${c.label}</div>`).join('')}
+    </div>` : '';
   el.innerHTML = `
     <div class="feedback-header">Corrección<span class="score-pill">${data.score_estimate||'?'}</span></div>
     <div class="overall">${data.overall_feedback||''}</div>
+    ${checklistHtml}
     ${(data.errors||[]).map(e=>`
       <div class="error-item">
         <span class="wrong">${e.wrong}</span> → <span class="right">${e.right}</span>
