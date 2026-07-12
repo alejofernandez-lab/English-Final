@@ -197,6 +197,10 @@
     <div class="topic-grid" id="opinion-topics"></div>
 
     <div class="workspace" id="opinion-workspace">
+      <div class="row" style="margin-bottom:12px;">
+        <button class="btn-secondary" onclick="closeWorkspace('opinion')">← Elegir otro tema</button>
+        <span></span>
+      </div>
       <div class="prompt-box" id="opinion-prompt"></div>
       <textarea id="opinion-text" placeholder="Escribí tu opinion writing acá..."></textarea>
       <div class="row">
@@ -217,9 +221,14 @@
     <div class="topic-grid" id="listening-topics"></div>
 
     <div class="workspace" id="listening-workspace">
+      <div class="row" style="margin-bottom:12px;">
+        <button class="btn-secondary" onclick="closeWorkspace('listening')">← Elegir otro audio</button>
+        <span></span>
+      </div>
       <div class="prompt-box" id="listening-title" style="font-family:'Kalam',cursive; font-size:17px;"></div>
       <div class="audio-controls">
-        <button class="btn-primary" id="listening-play-btn" onclick="playListening()">▶ Escuchar</button>
+        <button class="btn-primary" id="listening-play-btn" onclick="toggleListening()">▶ Escuchar</button>
+        <button class="btn-secondary" id="listening-stop-btn" onclick="stopListening()">■ Detener</button>
         <span class="plays-left" id="listening-plays"></span>
       </div>
       <div id="listening-mcqs"></div>
@@ -239,6 +248,10 @@
     <div class="topic-grid" id="cl-topics"></div>
 
     <div class="workspace" id="cl-workspace">
+      <div class="row" style="margin-bottom:12px;">
+        <button class="btn-secondary" onclick="closeWorkspace('cl')">← Elegir otro tema</button>
+        <span></span>
+      </div>
       <div class="prompt-box" id="cl-prompt"></div>
       <div class="hints" id="cl-hints"></div>
       <textarea id="cl-text" placeholder="Escribí tu cover letter acá..." style="margin-top:10px;"></textarea>
@@ -414,13 +427,18 @@ function openOpinion(i){
 document.getElementById('opinion-text').addEventListener('input', ()=>updateCount('opinion'));
 
 /* ================= LISTENING ================= */
+let listeningState = 'stopped'; // 'stopped' | 'playing' | 'paused'
+
 function openListening(i){
+  window.speechSynthesis.cancel();
+  listeningState = 'stopped';
   currentListening = listeningTopics[i];
   listeningPlays = 2;
   document.getElementById('listening-topics').style.display='none';
   document.getElementById('listening-workspace').classList.add('active');
   document.getElementById('listening-title').textContent = "🎧 " + currentListening.title;
   document.getElementById('listening-plays').textContent = `${listeningPlays} reproducciones disponibles`;
+  document.getElementById('listening-play-btn').textContent = '▶ Escuchar';
   document.getElementById('listening-play-btn').disabled = false;
   renderMCQs();
 }
@@ -445,16 +463,47 @@ function renderMCQs(){
     });
   });
 }
-function playListening(){
+function updatePlaysLabel(){
+  document.getElementById('listening-plays').textContent = listeningPlays>0 ? `${listeningPlays} reproducciones disponibles` : 'Sin reproducciones restantes';
+}
+function toggleListening(){
+  const btn = document.getElementById('listening-play-btn');
+  if(listeningState === 'playing'){
+    window.speechSynthesis.pause();
+    listeningState = 'paused';
+    btn.textContent = '▶ Reanudar';
+    return;
+  }
+  if(listeningState === 'paused'){
+    window.speechSynthesis.resume();
+    listeningState = 'playing';
+    btn.textContent = '⏸ Pausar';
+    return;
+  }
+  // stopped -> start a fresh playback (consumes one of the 2 replays)
   if(listeningPlays <= 0) return;
   listeningPlays--;
-  document.getElementById('listening-plays').textContent = listeningPlays>0 ? `${listeningPlays} reproducciones disponibles` : 'Sin reproducciones restantes';
-  if(listeningPlays<=0) document.getElementById('listening-play-btn').disabled = true;
+  updatePlaysLabel();
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(currentListening.text);
   utter.lang = 'en-US';
   utter.rate = 0.95;
+  utter.onend = ()=>{
+    listeningState = 'stopped';
+    btn.textContent = '▶ Escuchar';
+    if(listeningPlays<=0) btn.disabled = true;
+  };
   window.speechSynthesis.speak(utter);
+  listeningState = 'playing';
+  btn.textContent = '⏸ Pausar';
+  btn.disabled = false;
+}
+function stopListening(){
+  window.speechSynthesis.cancel();
+  listeningState = 'stopped';
+  const btn = document.getElementById('listening-play-btn');
+  btn.textContent = '▶ Escuchar';
+  btn.disabled = listeningPlays<=0;
 }
 
 /* ================= COVER LETTER ================= */
@@ -487,27 +536,58 @@ function updateCount(prefix){
 }
 
 function closeWorkspace(prefix){
+  if(prefix === 'listening'){ window.speechSynthesis.cancel(); listeningState = 'stopped'; }
   document.getElementById(prefix+'-topics').style.display='';
   document.getElementById(prefix+'-workspace').classList.remove('active');
   document.querySelectorAll(`#${prefix}-topics .topic-card`).forEach(c=>c.classList.remove('selected'));
 }
 
 /* ================= AI CORRECTION ================= */
-async function callClaude(userPrompt){
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: userPrompt }]
-    })
-  });
-  const data = await response.json();
-  const textBlock = data.content.find(b=>b.type==='text');
-  let raw = textBlock ? textBlock.text : '{}';
+function extractJSON(raw){
   raw = raw.replace(/```json|```/g,'').trim();
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if(start === -1 || end === -1 || end < start){
+    throw new Error('La respuesta no tenía formato JSON reconocible.');
+  }
+  raw = raw.substring(start, end+1);
   return JSON.parse(raw);
+}
+
+async function callClaude(userPrompt){
+  let response;
+  try{
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: userPrompt }]
+      })
+    });
+  }catch(networkErr){
+    throw new Error('No se pudo conectar con la API (error de red). Si abriste el archivo como HTML local o lo deployaste fuera de Claude, esta función de corrección con IA no va a funcionar ahí — el proxy de la API solo está disponible cuando el archivo se previsualiza dentro de Claude.');
+  }
+  let data;
+  try{
+    data = await response.json();
+  }catch(parseErr){
+    throw new Error(`La API respondió con un formato inesperado (status ${response.status}).`);
+  }
+  if(!response.ok || data.error){
+    throw new Error(data?.error?.message || `Error de la API (status ${response.status}).`);
+  }
+  const textBlock = (data.content||[]).find(b=>b.type==='text');
+  if(!textBlock || !textBlock.text){
+    throw new Error('La API no devolvió texto en la respuesta.');
+  }
+  try{
+    return extractJSON(textBlock.text);
+  }catch(jsonErr){
+    console.error('Raw model output:', textBlock.text);
+    throw new Error('No se pudo interpretar la corrección (formato inválido). Mirá la consola para el detalle.');
+  }
 }
 
 function buildCorrectionPrompt(kind, taskDescription, studentText){
@@ -558,7 +638,7 @@ async function correctText(prefix){
     const data = await callClaude(buildCorrectionPrompt(kind, taskDesc, text));
     renderFeedback(prefix, data);
   }catch(err){
-    fbEl.innerHTML = '<div class="loading">Hubo un error corrigiendo. Probá de nuevo.</div>';
+    fbEl.innerHTML = `<div class="loading">⚠️ ${err.message || 'Hubo un error corrigiendo. Probá de nuevo.'}</div>`;
     console.error(err);
   }
   btn.disabled = false;
@@ -641,7 +721,7 @@ async function correctOral(){
     const data = await callClaude(buildCorrectionPrompt('Oral exam (spoken, transcribed)', taskDesc, text));
     renderFeedback('oral', data);
   }catch(err){
-    fbEl.innerHTML = '<div class="loading">Hubo un error corrigiendo. Probá de nuevo.</div>';
+    fbEl.innerHTML = `<div class="loading">⚠️ ${err.message || 'Hubo un error corrigiendo. Probá de nuevo.'}</div>`;
     console.error(err);
   }
   btn.disabled = false;
