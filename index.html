@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English I — Práctica Final</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #f6f4ee;
+    --paper-line: #d8d3c4;
+    --margin-red: #c0392b;
+    --ink: #24316b;
+    --ink-soft: #3b4a94;
+    --pencil: #6b6b63;
+    --pencil-light: #9a978a;
+    --highlight: #fff29b;
+    --green: #2f7d4f;
+    --card-shadow: 0 2px 0 rgba(0,0,0,0.04), 0 8px 20px -12px rgba(36,49,107,0.25);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--paper), var(--paper)),
+      repeating-linear-gradient(transparent, transparent 33px, var(--paper-line) 34px);
+    background-attachment:local;
+    font-family:'Inter',sans-serif;
+    color:#2a2a24;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .margin-rule{
+    position:fixed; top:0; bottom:0; left:64px; width:2px; background:rgba(192,57,43,0.35);
+    z-index:0; pointer-events:none;
+  }
+  @media (max-width:700px){ .margin-rule{left:28px;} }
+
+  header{
+    position:relative; z-index:1;
+    padding:34px 24px 18px 84px;
+  }
+  @media (max-width:700px){ header{padding:28px 16px 14px 40px;} }
+  .kicker{
+    font-family:'Kalam',cursive; color:var(--margin-red); font-size:15px; transform:rotate(-1.5deg);
+    display:inline-block; margin-bottom:2px;
+  }
+  h1{
+    font-family:'Caveat',cursive; font-size:44px; color:var(--ink); margin:0 0 4px 0; font-weight:700;
+  }
+  .subhead{ color:var(--pencil); font-size:14.5px; }
+
+  nav{
+    position:relative; z-index:1;
+    display:flex; gap:8px; padding:0 24px 0 84px; flex-wrap:wrap;
+  }
+  @media (max-width:700px){ nav{padding:0 16px 0 40px;} }
+  .tab{
+    font-family:'Kalam',cursive; font-weight:700; font-size:16px;
+    padding:9px 16px 7px; background:#eceadf; color:var(--pencil);
+    border:1.5px solid var(--paper-line); border-bottom:none;
+    border-radius:8px 8px 0 0; cursor:pointer; user-select:none;
+    transform:translateY(2px);
+  }
+  .tab.active{
+    background:var(--paper); color:var(--ink); border-color:var(--ink);
+    box-shadow:0 -2px 0 rgba(0,0,0,0.02);
+  }
+  main{
+    position:relative; z-index:1;
+    margin:0 24px 0 84px; padding:26px;
+    background:var(--paper); border:1.5px solid var(--ink); border-radius:0 10px 10px 10px;
+    box-shadow:var(--card-shadow);
+  }
+  @media (max-width:700px){ main{margin:0 16px 0 40px; padding:18px;} }
+
+  .section{display:none;}
+  .section.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  .intro-note{
+    font-family:'Kalam',cursive; font-size:15px; color:var(--pencil); background:#eeecdf;
+    border-left:3px solid var(--margin-red); padding:10px 14px; border-radius:0 6px 6px 0; margin-bottom:20px;
+  }
+
+  .topic-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin-bottom:22px; }
+  .topic-card{
+    background:#fff; border:1.5px solid var(--paper-line); border-radius:10px; padding:14px 16px;
+    cursor:pointer; transition:.15s; position:relative;
+  }
+  .topic-card:hover{ border-color:var(--ink-soft); transform:translateY(-2px); box-shadow:0 6px 14px -8px rgba(36,49,107,.35); }
+  .topic-card.selected{ border-color:var(--ink); background:#eef0fb; }
+  .topic-card .tag{ font-family:'Kalam',cursive; font-size:11px; color:var(--margin-red); text-transform:uppercase; letter-spacing:.03em; }
+  .topic-card .ttl{ font-weight:700; font-size:14.5px; color:var(--ink); margin-top:3px; }
+
+  .workspace{ display:none; }
+  .workspace.active{ display:block; }
+  .prompt-box{
+    background:#eef0fb; border:1.5px dashed var(--ink-soft); border-radius:8px; padding:14px 16px; margin-bottom:14px; font-size:14.5px;
+  }
+  .prompt-box b{color:var(--ink);}
+  .hints{ font-size:13px; color:var(--pencil); margin-top:8px; }
+  .hints code{ background:var(--highlight); padding:1px 5px; border-radius:3px; font-family:'Inter'; }
+
+  textarea{
+    width:100%; min-height:180px; font-family:'Inter'; font-size:15px; line-height:1.6;
+    padding:14px; border:1.5px solid var(--paper-line); border-radius:8px; resize:vertical;
+    background:repeating-linear-gradient(#fff, #fff 27px, #eee9d8 28px);
+  }
+  textarea:focus{ outline:none; border-color:var(--ink-soft); }
+
+  .row{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;}
+  .wordcount{ font-size:13px; color:var(--pencil); }
+  .wordcount.warn{ color:var(--margin-red); font-weight:700; }
+
+  button{
+    font-family:'Inter'; font-weight:700; font-size:14px; padding:10px 18px; border-radius:8px; border:none;
+    cursor:pointer; transition:.15s;
+  }
+  .btn-primary{ background:var(--ink); color:#fff; }
+  .btn-primary:hover{ background:var(--ink-soft); }
+  .btn-primary:disabled{ opacity:.5; cursor:wait; }
+  .btn-secondary{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); }
+  .btn-secondary:hover{ background:#eef0fb; }
+  .btn-red{ background:var(--margin-red); color:#fff; }
+
+  .feedback{ margin-top:18px; border-top:2px dotted var(--paper-line); padding-top:16px; display:none; }
+  .feedback.show{ display:block; }
+  .feedback-header{ font-family:'Kalam',cursive; color:var(--margin-red); font-size:19px; margin-bottom:8px; transform:rotate(-.5deg); display:inline-block;}
+  .score-pill{
+    display:inline-block; background:var(--margin-red); color:#fff; font-family:'Kalam',cursive; font-weight:700;
+    padding:4px 12px; border-radius:20px; font-size:14px; margin-left:8px; transform:rotate(2deg);
+  }
+  .overall{ background:#fbf8ee; border-left:3px solid var(--green); padding:10px 14px; border-radius:0 6px 6px 0; font-size:14.5px; margin-bottom:12px;}
+  .error-item{
+    background:#fff; border:1px solid var(--paper-line); border-radius:8px; padding:10px 14px; margin-bottom:8px; font-size:14px;
+  }
+  .error-item .wrong{ color:var(--margin-red); text-decoration:line-through; font-family:'Kalam',cursive; }
+  .error-item .right{ color:var(--green); font-weight:700; font-family:'Kalam',cursive; }
+  .error-item .expl{ color:var(--pencil); font-size:13px; margin-top:4px; }
+  .loading{ font-family:'Kalam',cursive; color:var(--pencil); font-size:15px; }
+
+  /* Listening */
+  .audio-controls{ display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
+  .plays-left{ font-size:13px; color:var(--pencil); }
+  .mcq{ margin-bottom:16px; background:#fff; border:1.5px solid var(--paper-line); border-radius:8px; padding:14px 16px;}
+  .mcq .q{ font-weight:700; margin-bottom:8px; }
+  .opt{
+    display:block; padding:8px 12px; border:1.5px solid var(--paper-line); border-radius:6px; margin-bottom:6px; cursor:pointer; font-size:14px;
+  }
+  .opt:hover{ border-color:var(--ink-soft); }
+  .opt.correct{ background:#e5f4ea; border-color:var(--green); font-weight:700;}
+  .opt.wrong{ background:#fbe9e7; border-color:var(--margin-red); }
+  .opt.disabled{ pointer-events:none; }
+
+  /* Oral */
+  .card-draw{ text-align:center; padding:30px 10px; }
+  .flashcard{
+    max-width:420px; margin:0 auto 18px; background:#fff; border:2px solid var(--ink); border-radius:14px; padding:26px 22px;
+    box-shadow:var(--card-shadow); min-height:120px; display:flex; align-items:center; justify-content:center; text-align:center;
+  }
+  .flashcard .ttl{ font-family:'Caveat',cursive; font-size:30px; color:var(--ink); }
+  .timer{ font-family:'Kalam',cursive; font-size:38px; color:var(--margin-red); margin:10px 0; }
+  .guiding{ text-align:left; max-width:460px; margin:0 auto 16px; font-size:14px; color:var(--pencil); }
+  .transcript-box{
+    text-align:left; background:#fff; border:1.5px solid var(--paper-line); border-radius:8px; padding:14px; margin:14px auto; max-width:520px; min-height:60px; font-size:14.5px;
+  }
+  .rec-dot{ display:inline-block; width:9px; height:9px; background:var(--margin-red); border-radius:50%; margin-right:6px; animation:pulse 1s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+  footer{ text-align:center; color:var(--pencil-light); font-size:12px; margin-top:30px; font-family:'Kalam',cursive; }
+</style>
+</head>
+<body>
+<div class="margin-rule"></div>
+
+<header>
+  <span class="kicker">TPO #3 · English I</span>
+  <h1>Práctica para el final ✏️</h1>
+  <div class="subhead">4 secciones iguales al examen real — Opinion Writing, Listening, Cover Letter y Oral. Elegí un tema y practicá.</div>
+</header>
+
+<nav>
+  <div class="tab active" data-section="opinion">Opinion Writing</div>
+  <div class="tab" data-section="listening">Listening</div>
+  <div class="tab" data-section="coverletter">Cover Letter</div>
+  <div class="tab" data-section="oral">Oral</div>
+</nav>
+
+<main>
+
+  <!-- ================= OPINION WRITING ================= -->
+  <section class="section active" id="opinion">
+    <div class="intro-note">📝 Elegí un tema, escribí tu opinión (150-200 palabras) siguiendo la estructura: <b>postura clara → 2-3 argumentos con ejemplos → contraargumento breve → conclusión</b>. Después tocá "Corregir" para recibir feedback.</div>
+
+    <div class="topic-grid" id="opinion-topics"></div>
+
+    <div class="workspace" id="opinion-workspace">
+      <div class="prompt-box" id="opinion-prompt"></div>
+      <textarea id="opinion-text" placeholder="Escribí tu opinion writing acá..."></textarea>
+      <div class="row">
+        <span class="wordcount" id="opinion-count">0 palabras</span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" onclick="closeWorkspace('opinion')">← Elegir otro tema</button>
+          <button class="btn-primary" id="opinion-correct-btn" onclick="correctText('opinion')">Corregir con IA</button>
+        </div>
+      </div>
+      <div class="feedback" id="opinion-feedback"></div>
+    </div>
+  </section>
+
+  <!-- ================= LISTENING ================= -->
+  <section class="section" id="listening">
+    <div class="intro-note">🎧 Elegí un audio, escuchalo (máx. 2 veces, como en el examen real) y respondé las preguntas de comprensión.</div>
+
+    <div class="topic-grid" id="listening-topics"></div>
+
+    <div class="workspace" id="listening-workspace">
+      <div class="prompt-box" id="listening-title" style="font-family:'Kalam',cursive; font-size:17px;"></div>
+      <div class="audio-controls">
+        <button class="btn-primary" id="listening-play-btn" onclick="playListening()">▶ Escuchar</button>
+        <span class="plays-left" id="listening-plays"></span>
+      </div>
+      <div id="listening-mcqs"></div>
+      <div class="row">
+        <span></span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" onclick="closeWorkspace('listening')">← Elegir otro audio</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COVER LETTER ================= -->
+  <section class="section" id="coverletter">
+    <div class="intro-note">✉️ Elegí una consigna y escribí la cover letter (120-150 palabras) siguiendo el layout: <code>(fecha) → (greeting) → (introduction) → (body) → (conclusion) → (closing) → (signature) → (nombre)</code>.</div>
+
+    <div class="topic-grid" id="cl-topics"></div>
+
+    <div class="workspace" id="cl-workspace">
+      <div class="prompt-box" id="cl-prompt"></div>
+      <div class="hints" id="cl-hints"></div>
+      <textarea id="cl-text" placeholder="Escribí tu cover letter acá..." style="margin-top:10px;"></textarea>
+      <div class="row">
+        <span class="wordcount" id="cl-count">0 palabras</span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" onclick="closeWorkspace('cl')">← Elegir otro tema</button>
+          <button class="btn-primary" id="cl-correct-btn" onclick="correctText('cl')">Corregir con IA</button>
+        </div>
+      </div>
+      <div class="feedback" id="cl-feedback"></div>
+    </div>
+  </section>
+
+  <!-- ================= ORAL ================= -->
+  <section class="section" id="oral">
+    <div class="intro-note">🎤 Sacá una tarjeta al azar (como hace la profesora), preparate 60 segundos, después grabate hablando 90 segundos. Al final podés pedir feedback de tu transcripción.</div>
+
+    <div class="card-draw" id="oral-draw">
+      <button class="btn-primary" onclick="drawCard()" style="font-size:16px; padding:14px 28px;">🎲 Sacar una tarjeta</button>
+    </div>
+
+    <div class="workspace" id="oral-workspace">
+      <div class="flashcard"><div class="ttl" id="oral-topic"></div></div>
+      <div class="guiding" id="oral-guiding"></div>
+
+      <div style="text-align:center;">
+        <div id="oral-phase-prep">
+          <div class="timer" id="oral-timer">1:00</div>
+          <div style="color:var(--pencil); font-size:13px; margin-bottom:10px;">Tiempo de preparación</div>
+          <button class="btn-secondary" onclick="skipPrep()">Saltar preparación →</button>
+        </div>
+
+        <div id="oral-phase-speak" style="display:none;">
+          <div class="timer" id="oral-speak-timer">1:30</div>
+          <div style="color:var(--pencil); font-size:13px; margin-bottom:10px;"><span class="rec-dot"></span>Grabando... hablá ahora</div>
+          <button class="btn-red" onclick="stopSpeaking()">■ Terminar antes</button>
+        </div>
+
+        <div id="oral-phase-done" style="display:none;">
+          <div class="transcript-box" id="oral-transcript"></div>
+          <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
+            <button class="btn-secondary" onclick="closeOral()">← Otra tarjeta</button>
+            <button class="btn-primary" id="oral-correct-btn" onclick="correctOral()">Corregir con IA</button>
+          </div>
+          <div class="feedback" id="oral-feedback"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+<footer>hecha con cariño para que le vaya diez puntos ❤️</footer>
+
+<script>
+/* ================= DATA ================= */
+const opinionTopics = [
+  {tag:"Sociedad", title:"Territorios de hombres", prompt:"Do you think women should have to prove themselves before entering fields traditionally dominated by men (e.g. sports, engineering, the military)? Agree or disagree and explain why."},
+  {tag:"Tecnología", title:"Redes verificadas", prompt:"Should social media platforms require users to verify their real identity? Give your opinion with reasons and examples."},
+  {tag:"Trabajo", title:"Home office vs oficina", prompt:"Is remote work better than working in a traditional office? Discuss the advantages and disadvantages and give your opinion."},
+  {tag:"Educación", title:"Celulares en clase", prompt:"Should schools ban smartphones during class time? Agree or disagree and support your answer."},
+  {tag:"Ética", title:"Testeo en animales", prompt:"Should companies be allowed to test cosmetic products on animals? Give your opinion."},
+  {tag:"Trabajo", title:"Redes en selección", prompt:"Is it fair for employers to check candidates' social media before hiring them? Explain your point of view."},
+];
+
+const listeningTopics = [
+  {
+    tag:"Sociedad", title:"The Boomerang Generation",
+    text:"More and more young adults today are moving back in with their parents after finishing university. People call this trend 'the boomerang generation', because these young people leave home and then bounce back, just like a boomerang. There are several reasons for this. First, rent prices in big cities have increased a lot faster than salaries, so many graduates simply cannot afford to live on their own. Second, some young people are choosing to save money for a few years before buying a house or starting a family. Finally, the job market has become more competitive, and it can take months, or even years, for a graduate to find stable, well-paid work. While some parents are happy to have their children back home, others feel it puts extra pressure on the household budget and on family relationships.",
+    questions:[
+      {q:"Why is this trend called 'the boomerang generation'?", opts:["Because young people travel a lot","Because young people leave and then return home","Because they change jobs frequently"], correct:1},
+      {q:"According to the text, what is one reason young adults move back home?", opts:["They dislike living alone","Rent has grown faster than salaries","Universities require it"], correct:1},
+      {q:"How do all parents feel about their children moving back?", opts:["All parents are thrilled","Everyone disagrees with it","Reactions are mixed"], correct:2},
+    ]
+  },
+  {
+    tag:"Trabajo", title:"The Rise of the Gig Economy",
+    text:"In the last decade, the gig economy has grown enormously. Instead of having one full-time job, many people now work several short-term jobs or freelance projects, often found through apps. Drivers, delivery workers, designers and writers are common examples of gig workers. The main advantage of this kind of work is flexibility: people can choose when and how much they work. However, there are also downsides. Gig workers usually do not receive benefits such as paid holidays, health insurance or a fixed salary. Their income can change a lot from month to month, which makes it harder to plan for the future. Experts are still debating whether governments should create new laws to protect gig workers, similar to the rights that traditional employees already have.",
+    questions:[
+      {q:"What is the main advantage of gig work mentioned in the text?", opts:["High fixed salary","Flexibility","Guaranteed benefits"], correct:1},
+      {q:"What is a disadvantage of gig work?", opts:["Lack of benefits like paid holidays","Too much training required","Fixed working hours"], correct:0},
+      {q:"What are experts currently discussing?", opts:["Banning gig work completely","Whether new laws are needed to protect gig workers","Reducing app usage"], correct:1},
+    ]
+  },
+  {
+    tag:"Bienestar", title:"Digital Detox: Why People Are Unplugging",
+    text:"A growing number of people are choosing to take a 'digital detox', which means spending some time completely away from phones, social media and the internet. Some people do this for just one weekend, while others try it for a whole month. The main reason people give for unplugging is stress: constant notifications and the pressure to always be available can be exhausting. Many also say they want to spend more quality time with family and friends, without the distraction of a screen. Studies suggest that reducing screen time can improve sleep and concentration. However, it is not always easy, since many jobs today require constant access to email and messaging apps, and some people feel anxious when they are disconnected for too long.",
+    questions:[
+      {q:"What is a digital detox?", opts:["Buying a new phone","Time spent away from screens and the internet","A type of diet"], correct:1},
+      {q:"What is the main reason people mention for doing a digital detox?", opts:["Stress","Boredom","Money problems"], correct:0},
+      {q:"What makes digital detox difficult for some people?", opts:["It is too expensive","Many jobs require constant online access","It is illegal in some countries"], correct:1},
+    ]
+  },
+  {
+    tag:"Trabajo", title:"Work-Life Balance in the Modern Office",
+    text:"Work-life balance has become one of the most talked-about topics in modern offices. Many employees today expect more than just a good salary; they also want enough time for their personal lives, hobbies and family. Some companies have responded by offering flexible schedules, remote work options, or even a four-day work week. Supporters of these changes argue that happier, less stressed employees are actually more productive. On the other hand, some managers worry that too much flexibility can lead to lower communication between teams and missed deadlines. Finding the right balance between company needs and employee wellbeing continues to be a major challenge for businesses of all sizes.",
+    questions:[
+      {q:"What do many employees expect today, besides a good salary?", opts:["A company car","Time for their personal lives","Free lunch every day"], correct:1},
+      {q:"What is one change some companies have made?", opts:["Longer working hours","A four-day work week","Removing all holidays"], correct:1},
+      {q:"What concern do some managers have about flexibility?", opts:["It costs too much money","It can lower communication between teams","It reduces salaries"], correct:1},
+    ]
+  },
+];
+
+const clTopics = [
+  {tag:"Marketing", title:"Trade Marketing — L'Oréal", company:"L'Oréal", position:"Trade Marketing Assistant", found:"a LinkedIn job advertisement",
+   prompt:"You are applying for a Trade Marketing Assistant position at L'Oréal. You found the job advertisement on LinkedIn. Write a cover letter (120-150 words)."},
+  {tag:"Marketing", title:"Marketing Analyst — Unilever", company:"Unilever", position:"Marketing Analyst", found:"your university's job board",
+   prompt:"You are applying for a Marketing Analyst position at Unilever. You found out about it through your university's job board. Write a cover letter (120-150 words)."},
+  {tag:"Atención al cliente", title:"Customer Service — Despegar", company:"Despegar.com", position:"Customer Service Representative", found:"a referral from one of your professors",
+   prompt:"You are applying for a Customer Service Representative role at Despegar.com. A professor recommended you for the position. Write a cover letter (120-150 words)."},
+  {tag:"Redes", title:"Social Media Coordinator — startup", company:"a fashion startup called Lumé", position:"Social Media Coordinator", found:"an Instagram job posting",
+   prompt:"You are applying for a Social Media Coordinator position at a fashion startup called Lumé. You found the position through an Instagram post. Write a cover letter (120-150 words)."},
+  {tag:"Datos", title:"Data Analyst Intern — Mercado Libre", company:"Mercado Libre", position:"Data Analyst Intern", found:"a university internship fair",
+   prompt:"You are applying for a Data Analyst Intern position at Mercado Libre. You found out about the position at a university internship fair. Write a cover letter (120-150 words)."},
+];
+
+const oralCards = [
+  {topic:"Daily Routines", guiding:["What time do you usually wake up?","Describe your morning routine.","What do you do after work/university?","How is your routine different on weekends?"]},
+  {topic:"Reserving a Hotel Room", guiding:["Role-play calling a hotel to reserve a room.","Mention dates, number of guests, and room type.","Ask about breakfast and cancellation policy.","Ask about the price and payment methods."]},
+  {topic:"Asking for Directions", guiding:["Ask a stranger how to get to the train station.","Use phrases like 'turn left', 'go straight', 'it's on the corner of...'","Ask how long it will take on foot.","Thank the person and confirm you understood."]},
+  {topic:"Job Interview: Tell Me About Yourself", guiding:["Introduce yourself briefly.","Mention your studies and work experience.","Describe your strengths.","Explain why you want this job."]},
+  {topic:"Ordering at a Restaurant", guiding:["Greet the waiter and ask for the menu.","Order a starter, a main course and a drink.","Ask a question about an ingredient.","Ask for the bill at the end."]},
+  {topic:"Describing Your Hometown", guiding:["Where is your hometown located?","What is it famous for?","What do you like most about it?","Would you recommend visiting it? Why?"]},
+  {topic:"Hobbies and Free Time", guiding:["What do you like doing in your free time?","How did you get into this hobby?","How often do you do it?","Would you recommend it to others?"]},
+  {topic:"Making a Complaint", guiding:["You bought a product that doesn't work. Explain the problem.","Say when and where you bought it.","Ask for a refund or replacement.","Stay polite but firm."]},
+  {topic:"Plans for Next Weekend", guiding:["What are you planning to do next weekend?","Who are you going with?","Why did you choose this plan?","What will you do if the weather is bad?"]},
+  {topic:"A Memorable Trip", guiding:["Describe a trip you remember well.","Where did you go and who with?","What happened that made it memorable?","Would you go back? Why?"]},
+];
+
+/* ================= STATE ================= */
+let currentOpinion = null;
+let currentListening = null, listeningPlays = 2, listeningUtterance = null;
+let currentCL = null;
+let currentOralCard = null, oralTimerInterval = null, recognition = null, oralTranscript = "";
+
+/* ================= NAV ================= */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.section).classList.add('active');
+  });
+});
+
+/* ================= RENDER TOPIC GRIDS ================= */
+function renderTopics(containerId, topics, onClick){
+  const el = document.getElementById(containerId);
+  el.innerHTML = topics.map((t,i)=>`
+    <div class="topic-card" data-i="${i}">
+      <div class="tag">${t.tag}</div>
+      <div class="ttl">${t.title}</div>
+    </div>`).join('');
+  [...el.children].forEach((card,i)=>card.addEventListener('click', ()=>onClick(i)));
+}
+
+renderTopics('opinion-topics', opinionTopics, openOpinion);
+renderTopics('listening-topics', listeningTopics, openListening);
+renderTopics('cl-topics', clTopics, openCL);
+
+/* ================= OPINION WRITING ================= */
+function openOpinion(i){
+  currentOpinion = opinionTopics[i];
+  document.getElementById('opinion-topics').style.display='none';
+  document.getElementById('opinion-workspace').classList.add('active');
+  document.getElementById('opinion-prompt').innerHTML = `<b>Consigna:</b> ${currentOpinion.prompt}`;
+  document.getElementById('opinion-text').value = '';
+  document.getElementById('opinion-feedback').classList.remove('show');
+  document.getElementById('opinion-feedback').innerHTML = '';
+  updateCount('opinion');
+}
+document.getElementById('opinion-text').addEventListener('input', ()=>updateCount('opinion'));
+
+/* ================= LISTENING ================= */
+function openListening(i){
+  currentListening = listeningTopics[i];
+  listeningPlays = 2;
+  document.getElementById('listening-topics').style.display='none';
+  document.getElementById('listening-workspace').classList.add('active');
+  document.getElementById('listening-title').textContent = "🎧 " + currentListening.title;
+  document.getElementById('listening-plays').textContent = `${listeningPlays} reproducciones disponibles`;
+  document.getElementById('listening-play-btn').disabled = false;
+  renderMCQs();
+}
+function renderMCQs(){
+  const el = document.getElementById('listening-mcqs');
+  el.innerHTML = currentListening.questions.map((q,qi)=>`
+    <div class="mcq">
+      <div class="q">${qi+1}. ${q.q}</div>
+      ${q.opts.map((o,oi)=>`<div class="opt" data-qi="${qi}" data-oi="${oi}">${o}</div>`).join('')}
+    </div>`).join('');
+  el.querySelectorAll('.opt').forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      const qi = +opt.dataset.qi, oi = +opt.dataset.oi;
+      const q = currentListening.questions[qi];
+      const group = el.querySelectorAll(`.opt[data-qi="${qi}"]`);
+      group.forEach(g=>g.classList.add('disabled'));
+      if(oi === q.correct){ opt.classList.add('correct'); }
+      else{
+        opt.classList.add('wrong');
+        group[q.correct].classList.add('correct');
+      }
+    });
+  });
+}
+function playListening(){
+  if(listeningPlays <= 0) return;
+  listeningPlays--;
+  document.getElementById('listening-plays').textContent = listeningPlays>0 ? `${listeningPlays} reproducciones disponibles` : 'Sin reproducciones restantes';
+  if(listeningPlays<=0) document.getElementById('listening-play-btn').disabled = true;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(currentListening.text);
+  utter.lang = 'en-US';
+  utter.rate = 0.95;
+  window.speechSynthesis.speak(utter);
+}
+
+/* ================= COVER LETTER ================= */
+function openCL(i){
+  currentCL = clTopics[i];
+  document.getElementById('cl-topics').style.display='none';
+  document.getElementById('cl-workspace').classList.add('active');
+  document.getElementById('cl-prompt').innerHTML = `<b>Consigna:</b> ${currentCL.prompt}`;
+  document.getElementById('cl-hints').innerHTML = `
+    <b>Frases útiles:</b><br>
+    <code>I am writing to apply for the ${currentCL.position} position...</code><br>
+    <code>I found this job advertisement on/through ${currentCL.found}.</code><br>
+    <code>As you can see from my attached CV, I am...</code><br>
+    <code>I would be grateful if you would consider my application.</code><br>
+    <code>I look forward to hearing from you soon. / Yours faithfully,</code>`;
+  document.getElementById('cl-text').value = '';
+  document.getElementById('cl-feedback').classList.remove('show');
+  document.getElementById('cl-feedback').innerHTML = '';
+  updateCount('cl');
+}
+document.getElementById('cl-text').addEventListener('input', ()=>updateCount('cl'));
+
+function updateCount(prefix){
+  const text = document.getElementById(prefix+'-text').value.trim();
+  const words = text.length ? text.split(/\s+/).length : 0;
+  const el = document.getElementById(prefix+'-count');
+  el.textContent = `${words} palabras`;
+  const min = prefix==='cl' ? 120 : 150, max = prefix==='cl' ? 150 : 200;
+  el.classList.toggle('warn', words>0 && (words<min || words>max));
+}
+
+function closeWorkspace(prefix){
+  document.getElementById(prefix+'-topics').style.display='';
+  document.getElementById(prefix+'-workspace').classList.remove('active');
+  document.querySelectorAll(`#${prefix}-topics .topic-card`).forEach(c=>c.classList.remove('selected'));
+}
+
+/* ================= AI CORRECTION ================= */
+async function callClaude(userPrompt){
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      messages: [{ role: "user", content: userPrompt }]
+    })
+  });
+  const data = await response.json();
+  const textBlock = data.content.find(b=>b.type==='text');
+  let raw = textBlock ? textBlock.text : '{}';
+  raw = raw.replace(/```json|```/g,'').trim();
+  return JSON.parse(raw);
+}
+
+function buildCorrectionPrompt(kind, taskDescription, studentText){
+  return `You are an English teacher correcting a student's exam practice for an "English I" university course (B1-B2 level). Task type: ${kind}.
+Task description: ${taskDescription}
+Student's text:
+"""
+${studentText}
+"""
+Respond ONLY with valid JSON (no markdown, no preamble) in this exact structure:
+{
+  "score_estimate": "a score out of 10, e.g. 7/10",
+  "overall_feedback": "2-3 sentences in Spanish, encouraging but honest, about the overall quality, structure and whether it meets the task requirements",
+  "errors": [
+    {"wrong": "the incorrect phrase from the text", "right": "the corrected version", "explanation": "brief explanation in Spanish of the grammar/vocabulary rule"}
+  ],
+  "corrected_text": "the full text rewritten with all corrections applied, in English"
+}
+Find between 3 and 8 of the most important errors (grammar, verb tenses, prepositions, word choice, register). If the text is very short or empty, say so in overall_feedback and return an empty errors array.`;
+}
+
+function renderFeedback(prefix, data){
+  const el = document.getElementById(prefix+'-feedback');
+  el.innerHTML = `
+    <div class="feedback-header">Corrección<span class="score-pill">${data.score_estimate||'?'}</span></div>
+    <div class="overall">${data.overall_feedback||''}</div>
+    ${(data.errors||[]).map(e=>`
+      <div class="error-item">
+        <span class="wrong">${e.wrong}</span> → <span class="right">${e.right}</span>
+        <div class="expl">${e.explanation}</div>
+      </div>`).join('')}
+    ${data.corrected_text ? `<div class="prompt-box" style="margin-top:12px;"><b>Versión corregida:</b><br>${data.corrected_text}</div>` : ''}
+  `;
+  el.classList.add('show');
+}
+
+async function correctText(prefix){
+  const btn = document.getElementById(prefix+'-correct-btn');
+  const text = document.getElementById(prefix+'-text').value.trim();
+  const fbEl = document.getElementById(prefix+'-feedback');
+  if(!text){ alert('Escribí algo antes de corregir.'); return; }
+  btn.disabled = true;
+  fbEl.classList.add('show');
+  fbEl.innerHTML = '<div class="loading">Corrigiendo... ✏️</div>';
+  try{
+    const taskDesc = prefix==='opinion' ? currentOpinion.prompt : currentCL.prompt;
+    const kind = prefix==='opinion' ? 'Opinion Writing' : 'Cover Letter';
+    const data = await callClaude(buildCorrectionPrompt(kind, taskDesc, text));
+    renderFeedback(prefix, data);
+  }catch(err){
+    fbEl.innerHTML = '<div class="loading">Hubo un error corrigiendo. Probá de nuevo.</div>';
+    console.error(err);
+  }
+  btn.disabled = false;
+}
+
+/* ================= ORAL ================= */
+function drawCard(){
+  currentOralCard = oralCards[Math.floor(Math.random()*oralCards.length)];
+  document.getElementById('oral-draw').style.display='none';
+  document.getElementById('oral-workspace').classList.add('active');
+  document.getElementById('oral-topic').textContent = currentOralCard.topic;
+  document.getElementById('oral-guiding').innerHTML = '<b>Preguntas guía:</b><ul>' + currentOralCard.guiding.map(g=>`<li>${g}</li>`).join('') + '</ul>';
+  document.getElementById('oral-phase-prep').style.display='';
+  document.getElementById('oral-phase-speak').style.display='none';
+  document.getElementById('oral-phase-done').style.display='none';
+  startTimer('oral-timer', 60, skipPrep);
+}
+function startTimer(elId, seconds, onDone){
+  clearInterval(oralTimerInterval);
+  let remaining = seconds;
+  const el = document.getElementById(elId);
+  const render = ()=>{ const m=Math.floor(remaining/60), s=remaining%60; el.textContent = `${m}:${s.toString().padStart(2,'0')}`; };
+  render();
+  oralTimerInterval = setInterval(()=>{
+    remaining--;
+    render();
+    if(remaining<=0){ clearInterval(oralTimerInterval); onDone(); }
+  }, 1000);
+}
+function skipPrep(){
+  clearInterval(oralTimerInterval);
+  document.getElementById('oral-phase-prep').style.display='none';
+  document.getElementById('oral-phase-speak').style.display='';
+  startSpeaking();
+}
+function startSpeaking(){
+  oralTranscript = "";
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SR){
+    recognition = new SR();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (e)=>{
+      let finalText = "";
+      for(let i=0;i<e.results.length;i++){ if(e.results[i].isFinal) finalText += e.results[i][0].transcript + " "; }
+      oralTranscript = finalText;
+    };
+    recognition.onerror = (e)=>console.warn('speech recognition error', e.error);
+    try{ recognition.start(); }catch(e){}
+  }
+  startTimer('oral-speak-timer', 90, stopSpeaking);
+}
+function stopSpeaking(){
+  clearInterval(oralTimerInterval);
+  if(recognition){ try{ recognition.stop(); }catch(e){} }
+  document.getElementById('oral-phase-speak').style.display='none';
+  document.getElementById('oral-phase-done').style.display='';
+  document.getElementById('oral-transcript').innerHTML = oralTranscript.trim()
+    ? `<b>Lo que dijiste:</b><br>${oralTranscript}`
+    : `<i>No se detectó audio (o tu navegador no soporta reconocimiento de voz). Podés escribir manualmente lo que dijiste abajo:</i><br><textarea id="oral-manual" style="margin-top:8px; min-height:80px;"></textarea>`;
+  document.getElementById('oral-feedback').classList.remove('show');
+  document.getElementById('oral-feedback').innerHTML = '';
+}
+function closeOral(){
+  document.getElementById('oral-draw').style.display='';
+  document.getElementById('oral-workspace').classList.remove('active');
+}
+async function correctOral(){
+  const btn = document.getElementById('oral-correct-btn');
+  const manual = document.getElementById('oral-manual');
+  const text = (manual ? manual.value : oralTranscript).trim();
+  const fbEl = document.getElementById('oral-feedback');
+  if(!text){ alert('No hay texto para corregir.'); return; }
+  btn.disabled = true;
+  fbEl.classList.add('show');
+  fbEl.innerHTML = '<div class="loading">Corrigiendo... 🎤</div>';
+  try{
+    const taskDesc = `Oral exam card: "${currentOralCard.topic}". Guiding questions: ${currentOralCard.guiding.join(' ')}`;
+    const data = await callClaude(buildCorrectionPrompt('Oral exam (spoken, transcribed)', taskDesc, text));
+    renderFeedback('oral', data);
+  }catch(err){
+    fbEl.innerHTML = '<div class="loading">Hubo un error corrigiendo. Probá de nuevo.</div>';
+    console.error(err);
+  }
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
